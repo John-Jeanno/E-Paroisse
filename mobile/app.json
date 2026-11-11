@@ -1,0 +1,66 @@
+{
+  "expo": {
+    "name": "Paroisse NDA",
+    "slug": "e-paroisse",
+    "version": "1.0.0",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "icon": "./assets/app-icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F7F5F0"
+    },
+    "web": {
+      "name": "Paroisse NDA",
+      "shortName": "Paroisse NDA",
+      "favicon": "./public/favicon.ico",
+      "lang": "fr",
+      "themeColor": "#17324D",
+      "backgroundColor": "#F7F5F0"
+    },
+    "orientation": "portrait",
+    "android": {
+      "package": "com.eparoisse.mobile",
+      "label": "Paroisse NDA",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#F7F5F0"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "org.name.EParoisse",
+      "deploymentTarget": "16.4",
+      "infoPlist": {
+        "CFBundleDisplayName": "Paroisse NDA"
+      }
+    },
+    "plugins": [
+      "expo-asset",
+      "@react-native-community/datetimepicker",
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#F7F5F0"
+        }
+      ],
+      "expo-status-bar",
+      "expo-video",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Paroisse NDA a besoin du microphone pour enregistrer vos messages vocaux.",
+          "recordAudioAndroid": true,
+          "enableBackgroundPlayback": false
+        }
+      ]
+    ]
+  }
+}

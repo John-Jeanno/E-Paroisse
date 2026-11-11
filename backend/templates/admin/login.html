@@ -1,0 +1,65 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}{% if form.errors %}{% translate "Error:" %} {% endif %}{{ block.super }}{% endblock %}
+{% block bodyclass %}{{ block.super }} login{% endblock %}
+{% block usertools %}{% endblock %}
+{% block nav-global %}{% endblock %}
+{% block nav-sidebar %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block nav-breadcrumbs %}{% endblock %}
+
+{% block content %}
+<div class="parish-login-layout">
+  <section class="parish-login-welcome">
+    <span class="parish-eyebrow">PAROISSE NDA OUAKAM · ESPACE INTERNE</span>
+    <h1>Servir, accueillir,<br>faire grandir la communion.</h1>
+    <p>Retrouvez les outils de gestion, les documents et les services de votre paroisse dans un espace sécurisé.</p>
+    <div class="parish-login-verse">« Que tout se fasse pour l’édification commune. »</div>
+  </section>
+
+  <section class="parish-login-card" aria-labelledby="parish-login-title">
+    <div class="parish-login-card-mark">
+      <img src="{% static 'api/admin/parish-logo-blue.svg' %}" alt="">
+    </div>
+    <span class="parish-eyebrow">ACCÈS SÉCURISÉ</span>
+    <h2 id="parish-login-title">Bon retour parmi nous</h2>
+    <p class="parish-login-hint">Connectez-vous avec votre compte du personnel paroissial.</p>
+
+    {% if form.errors and not form.non_field_errors %}
+      <p class="errornote">Veuillez corriger l’erreur ci-dessous.</p>
+    {% endif %}
+    {% for error in form.non_field_errors %}
+      <p class="errornote">{{ error }}</p>
+    {% endfor %}
+    {% if user.is_authenticated %}
+      <p class="errornote">Vous êtes connecté sous le nom {{ username }}, mais ce compte n’est pas autorisé à accéder à cette page.</p>
+    {% endif %}
+
+    <form action="{{ app_path }}" method="post" id="login-form">
+      {% csrf_token %}
+      <div class="form-row">
+        {{ form.username.errors }}
+        <label for="{{ form.username.id_for_label }}">Identifiant</label>
+        {{ form.username }}
+      </div>
+      <div class="form-row">
+        {{ form.password.errors }}
+        <label for="{{ form.password.id_for_label }}">Mot de passe</label>
+        {{ form.password }}
+        <input type="hidden" name="next" value="{{ next }}">
+      </div>
+      {% url 'admin_password_reset' as password_reset_url %}
+      {% if password_reset_url %}
+        <div class="password-reset-link">
+          <a href="{{ password_reset_url }}">Mot de passe oublié ?</a>
+        </div>
+      {% endif %}
+      <div class="submit-row">
+        <button type="submit">Ouvrir mon espace <span aria-hidden="true">→</span></button>
+      </div>
+    </form>
+    <p class="parish-login-security">Accès réservé aux personnes autorisées.</p>
+  </section>
+</div>
+{% endblock %}

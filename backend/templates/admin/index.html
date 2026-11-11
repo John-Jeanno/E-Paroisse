@@ -1,0 +1,75 @@
+{% extends "admin/base_site.html" %}
+{% load i18n log %}
+
+{% block coltype %}colMS{% endblock %}
+{% block bodyclass %}{{ block.super }} dashboard{% endblock %}
+{% block nav-breadcrumbs %}{% endblock %}
+{% block nav-sidebar %}{% endblock %}
+
+{% block content %}
+<section class="parish-dashboard-hero">
+  <div class="parish-dashboard-copy">
+    <span class="parish-eyebrow">ESPACE DE GESTION PAROISSIALE</span>
+    <p>Que souhaitez-vous accomplir aujourd’hui ? Retrouvez ici les outils de votre mission au service de la communauté.</p>
+  </div>
+  <div class="parish-dashboard-date">{% now "l j F Y" %}</div>
+</section>
+
+<div class="parish-dashboard-grid">
+  <section id="content-main" class="app-list parish-app-list" aria-label="Outils de gestion">
+    <nav class="parish-quick-actions" aria-label="Accès rapides">
+      <div class="parish-quick-actions-heading">
+        <span class="parish-eyebrow">ACTIONS FRÉQUENTES</span>
+        <h2>Accès rapides</h2>
+      </div>
+      <a href="{% url 'admin:api_parishdocument_add' %}" class="parish-quick-action parish-quick-action-primary">
+        <span class="parish-quick-action-icon" aria-hidden="true">+</span>
+        <span><strong>Nouveau document</strong><small>Créer ou archiver un document</small></span>
+        <span class="parish-quick-action-arrow" aria-hidden="true">→</span>
+      </a>
+      <a href="{% url 'admin:api_massrequest_changelist' %}" class="parish-quick-action">
+        <span class="parish-quick-action-icon" aria-hidden="true">↗</span>
+        <span><strong>Demandes de messe</strong><small>Consulter et traiter les demandes</small></span>
+        <span class="parish-quick-action-arrow" aria-hidden="true">→</span>
+      </a>
+      <a href="{% url 'admin:api_announcement_add' %}" class="parish-quick-action">
+        <span class="parish-quick-action-icon" aria-hidden="true">✎</span>
+        <span><strong>Nouvelle annonce</strong><small>Informer la communauté</small></span>
+        <span class="parish-quick-action-arrow" aria-hidden="true">→</span>
+      </a>
+    </nav>
+    {% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}
+  </section>
+
+  <aside class="parish-recent-panel" id="content-related">
+    <div class="parish-panel-heading">
+      <span class="parish-eyebrow">VOTRE ACTIVITÉ</span>
+      <h2>Dernières actions</h2>
+    </div>
+    {% get_admin_log 8 as admin_log for_user user %}
+    {% if not admin_log %}
+      <p class="parish-empty-state">Vos actions récentes apparaîtront ici.</p>
+    {% else %}
+      <ul class="parish-activity-list">
+        {% for entry in admin_log %}
+          <li class="{% if entry.is_addition %}is-addition{% elif entry.is_change %}is-change{% else %}is-deletion{% endif %}">
+            <span class="parish-activity-marker" aria-hidden="true"></span>
+            <div>
+              <span class="parish-activity-type">
+                {% if entry.is_addition %}Ajout{% elif entry.is_change %}Modification{% elif entry.is_deletion %}Suppression{% endif %}
+                {% if entry.content_type %} · {{ entry.content_type }}{% endif %}
+              </span>
+              {% if entry.is_deletion or not entry.get_admin_url %}
+                <strong>{{ entry.object_repr }}</strong>
+              {% else %}
+                <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+              {% endif %}
+              <time datetime="{{ entry.action_time|date:'c' }}">{{ entry.action_time|date:"j F Y, H:i" }}</time>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

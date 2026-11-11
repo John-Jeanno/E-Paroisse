@@ -1,0 +1,63 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./deploy/runtime.env
+    environment:
+      DJANGO_DEBUG: "False"
+      DJANGO_ALLOWED_HOSTS: "5szq.l.time4vps.cloud,127.0.0.1,localhost"
+      DJANGO_CSRF_TRUSTED_ORIGINS: "https://5szq.l.time4vps.cloud:18080"
+      DATABASE_PATH: /app/data/db.sqlite3
+      MEDIA_ROOT: /app/media
+      PRIVATE_DOCUMENT_ROOT: /app/private_documents
+      STATIC_ROOT: /app/staticfiles
+    volumes:
+      - database:/app/data
+      - media:/app/media
+      - private_documents:/app/private_documents
+    networks:
+      - parish
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; request=urllib.request.Request('http://127.0.0.1:8000/api/annonces/', headers={'X-Forwarded-Proto':'https'}); urllib.request.urlopen(request, timeout=5)"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  web:
+    build:
+      context: ./mobile
+      dockerfile: Dockerfile
+      args:
+        EXPO_PUBLIC_API_URL: /api
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "18080:443"
+    volumes:
+      - media:/srv/media:ro
+      - /etc/letsencrypt/live/5szq.l.time4vps.cloud:/etc/letsencrypt/live/5szq.l.time4vps.cloud:ro
+      - /etc/letsencrypt/archive/5szq.l.time4vps.cloud-0001:/etc/letsencrypt/archive/5szq.l.time4vps.cloud-0001:ro
+    networks:
+      - parish
+
+networks:
+  parish:
+    name: eparoisse-production
+
+volumes:
+  database:
+    name: eparoisse-production-database
+  media:
+    name: eparoisse-production-media
+  private_documents:
+    name: eparoisse-production-private-documents

@@ -1,0 +1,27 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:"Paroisse NDA Ouakam" }}{% endblock %}
+
+{% block responsive %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'api/admin/parish-admin.css' %}?v=7">
+{% endblock %}
+
+{% block extrahead %}{{ block.super }}
+<script src="{% static 'api/admin/parish-admin.js' %}" defer></script>
+{% endblock %}
+
+{% block branding %}
+<div id="site-name" class="parish-brand">
+  <a href="{% url 'admin:index' %}" aria-label="Accueil de l’administration de la Paroisse NDA Ouakam">
+    <img src="{% static 'api/admin/parish-logo-blue.svg' %}" alt="">
+    <span class="parish-brand-copy">
+      <strong>{{ site_header|default:"Paroisse NDA Ouakam" }}</strong>
+      <small>Paroisse Notre Dame des Anges de Ouakam</small>
+    </span>
+  </a>
+</div>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}

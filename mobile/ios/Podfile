@@ -1,0 +1,153 @@
+require File.join(File.dirname(`node --print "require.resolve('expo/package.json')"`), "scripts/autolinking")
+require File.join(File.dirname(`node --print "require.resolve('react-native/package.json')"`), "scripts/react_native_pods")
+
+require 'json'
+podfile_properties = JSON.parse(File.read(File.join(__dir__, 'Podfile.properties.json'))) rescue {}
+
+ENV['RCT_NEW_ARCH_ENABLED'] = podfile_properties['newArchEnabled'] == 'true' ? '1' : '0'
+ENV['EX_DEV_CLIENT_NETWORK_INSPECTOR'] = podfile_properties['EX_DEV_CLIENT_NETWORK_INSPECTOR']
+
+platform :ios, podfile_properties['ios.deploymentTarget'] || '16.4'
+install! 'cocoapods',
+  :deterministic_uuids => false
+
+prepare_react_native_project!
+
+# Flipper configuration disabled due to compatibility issues with recent versions
+# If you need to enable Flipper, ensure the FlipperConfiguration class is available
+# flipper_config = FlipperConfiguration.disabled
+# if ENV['NO_FLIPPER'] == '1' then
+#   flipper_config = FlipperConfiguration.disabled
+# elsif podfile_properties.key?('ios.flipper') then
+#   if podfile_properties['ios.flipper'] == 'true' then
+#     flipper_config = FlipperConfiguration.enabled(["Debug", "Release"])
+#   elsif podfile_properties['ios.flipper'] != 'false' then
+#     flipper_config = FlipperConfiguration.enabled(["Debug", "Release"], { 'Flipper' => podfile_properties['ios.flipper'] })
+#   end
+# end
+flipper_config = nil
+
+target 'EParoisse' do
+  use_expo_modules!
+  config = use_native_modules!
+
+  use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']
+  use_frameworks! :linkage => ENV['USE_FRAMEWORKS'].to_sym if ENV['USE_FRAMEWORKS']
+
+  # Flags change depending on the env values.
+  flags = get_default_flags()
+
+  use_react_native!(
+    :path => config[:reactNativePath],
+    :hermes_enabled => true,
+    :fabric_enabled => flags[:fabric_enabled],
+    # An absolute path to your application root.
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+
+  post_install do |installer|
+    react_native_post_install(
+      installer,
+      '../node_modules/react-native',
+      :mac_catalyst_enabled => false
+    )
+
+    # This is necessary for Xcode 14, because it signs resource bundles by default
+    # when building for devices.
+    installer.target_installation_results.pod_target_installation_results
+      .each do |pod_name, target_installation_result|
+      target_installation_result.resource_bundle_targets.each do |resource_bundle_target|
+        resource_bundle_target.build_configurations.each do |config|
+          config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+        end
+      end
+    end
+    
+    # Disable treating warnings as errors for all pods
+    installer.pods_project.targets.each do |target|
+      # Special handling for fmt - disable constexpr strict checking
+      if target.name == 'fmt'
+        target.build_configurations.each do |config|
+          # Disable constexpr evaluation strictness
+          config.build_settings['GCC_TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+          config.build_settings['TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+          config.build_settings['OTHER_CFLAGS'] = '-Wno-error=all -Wno-error -Wno-constexpr-not-const'
+          config.build_settings['OTHER_CPLUSPLUSFLAGS'] = '-Wno-error=all -Wno-error -std=c++17'
+          config.build_settings['WARNING_CFLAGS'] = '-Wno-error=all -Wno-error'
+        end
+      elsif target.name == 'React-hermes'
+        target.build_configurations.each do |config|
+          cxx_flags = config.build_settings['OTHER_CPLUSPLUSFLAGS'] || '$(inherited)'
+          config.build_settings['OTHER_CPLUSPLUSFLAGS'] = "#{cxx_flags} -include thread"
+        end
+      elsif target.name == 'Expo'
+        # Suppress all Swift errors in Expo module to work around Fetch module type issues
+        target.build_configurations.each do |config|
+          config.build_settings['GCC_TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+          config.build_settings['TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+          config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
+          config.build_settings['MODULE_VERIFYAPIS'] = 'NO'
+          
+          # Add aggressive Swift error suppression for Fetch module type resolution issues
+          swift_flags = config.build_settings['OTHER_SWIFT_FLAGS'] || '$(inherited)'
+          config.build_settings['OTHER_SWIFT_FLAGS'] = "#{swift_flags} -suppress-warnings -Xfrontend -suppress-warnings"
+          config.build_settings['SWIFT_SUPPRESS_WARNINGS'] = 'YES'
+        end
+      elsif target.name == 'ExpoModulesCore'
+        # Fix Swift module import issues by aggressively suppressing errors
+        target.build_configurations.each do |config|
+          config.build_settings['GCC_TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+          config.build_settings['TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+          config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
+          config.build_settings['MODULE_VERIFYAPIS'] = 'NO'
+          
+          # Suppress all Swift compilation errors related to module resolution
+          swift_flags = config.build_settings['OTHER_SWIFT_FLAGS'] || '$(inherited)'
+          config.build_settings['OTHER_SWIFT_FLAGS'] = "#{swift_flags} -Xfrontend -suppress-warnings -suppress-warnings"
+          config.build_settings['SWIFT_SUPPRESS_WARNINGS'] = 'YES'
+          
+          # Explicitly enable header search paths for React module discovery
+          header_search_paths = config.build_settings['HEADER_SEARCH_PATHS'] || '$(inherited)'
+          react_paths = [
+            '$(PODS_ROOT)/React-Core/React',
+            '$(PODS_ROOT)/React-Core',
+            '$(PODS_ROOT)/React',
+            '$(PODS_ROOT)/../node_modules/react-native/React'
+          ]
+          config.build_settings['HEADER_SEARCH_PATHS'] = (header_search_paths.is_a?(String) ? 
+            "#{header_search_paths} #{react_paths.join(' ')}" : 
+            react_paths.join(' '))
+          # Add React as explicit dependency for Swift module resolution
+          config.build_settings['SWIFT_INCLUDE_PATHS'] = "$(PODS_ROOT)/React-Core $(PODS_ROOT)/React"
+        end
+      else
+        target.build_configurations.each do |config|
+          config.build_settings['GCC_TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+          config.build_settings['TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+          config.build_settings['OTHER_CFLAGS'] = '-Wno-error=all -Wno-error'
+          config.build_settings['OTHER_CPLUSPLUSFLAGS'] = '-Wno-error=all -Wno-error -Wno-deprecated-literal-operator'
+          config.build_settings['WARNING_CFLAGS'] = '-Wno-error=all -Wno-error'
+
+          # Ensure React Fabric headers generated by CocoaPods are discoverable
+          header_search_paths = config.build_settings['HEADER_SEARCH_PATHS'] || '$(inherited)'
+          react_header_paths = [
+            '$(PODS_ROOT)/Headers/Public',
+            '$(PODS_ROOT)/Headers/Private',
+            '$(PODS_ROOT)/Headers/Public/React-Fabric',
+            '$(PODS_ROOT)/Headers/Public/ReactCommon',
+            '$(PODS_ROOT)/../../node_modules/react-native/ReactCommon'
+          ]
+          config.build_settings['HEADER_SEARCH_PATHS'] = "#{header_search_paths} #{react_header_paths.join(' ')}"
+        end
+      end
+    end
+  end
+
+  post_integrate do |installer|
+    begin
+      expo_patch_react_imports!(installer)
+    rescue => e
+      Pod::UI.warn e
+    end
+  end
+end

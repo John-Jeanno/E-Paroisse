@@ -1,0 +1,39 @@
+# Node
+node_modules/
+.expo/
+.expo*/
+.expo-shared/
+.npm-cache/
+.npm-cache-local/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite3
+.env
+.venv/
+deploy/runtime.env
+backend/*/migrations/__pycache__/
+backend/private_documents/
+backend/media/test*.jpg
+backend/media/tmp*.jpg
+documents/
+
+# Native build artifacts
+**/.gradle/
+**/.cxx/
+mobile/android/**/build/
+*.keystore
+mobile/ios/Pods/
+mobile/ios/build/
+mobile/dist/
+
+# Misc
+.DS_Store
+*.log
+simulated_token.txt
+.playwright-mcp/
+.vscode/

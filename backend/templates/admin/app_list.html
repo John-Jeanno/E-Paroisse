@@ -1,0 +1,59 @@
+{% load i18n %}
+{% for app in app_list %}
+  {% if app.app_label == "api" %}
+    <section class="app-{{ app.app_label }} module parish-model-section" aria-label="{{ app.name }}">
+      <h2>{% if app.app_url %}<a href="{{ app.app_url }}">{{ app.name }}</a>{% else %}{{ app.name }}{% endif %}</h2>
+      <div class="parish-model-cards">
+        {% for model in app.models %}
+          <article class="parish-model-card">
+            <div class="parish-model-card-heading">
+              {% if model.admin_url %}
+                <a href="{{ model.admin_url }}">{{ model.name }}</a>
+              {% else %}
+                <h3>{{ model.name }}</h3>
+              {% endif %}
+              <span>Gestion paroissiale</span>
+            </div>
+            <div class="parish-model-card-actions">
+              {% if model.add_url %}
+                <a href="{{ model.add_url }}">{% translate "Add" %}</a>
+              {% endif %}
+              {% if model.admin_url and show_changelinks %}
+                <a href="{{ model.admin_url }}">{% translate "Change" %}</a>
+              {% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% else %}
+    <div class="app-{{ app.app_label }} module">
+      <table>
+        <caption>
+          <a href="{{ app.app_url }}" class="section" title="{% blocktranslate with name=app.name %}Models in the {{ name }} application{% endblocktranslate %}">{{ app.name }}</a>
+        </caption>
+        {% for model in app.models %}
+          <tr class="model-{{ model.object_name|lower }}">
+            {% if model.admin_url %}
+              <th scope="row">
+                <a href="{{ model.admin_url }}" title="{% blocktranslate with name=model.name %}Change {{ name }}{% endblocktranslate %}">{{ model.name }}</a>
+              </th>
+            {% else %}
+              <th scope="row">{{ model.name }}</th>
+            {% endif %}
+            {% if model.add_url %}
+              <td><a href="{{ model.add_url }}" class="addlink" title="{% blocktranslate with name=model.name %}Add {{ name }}{% endblocktranslate %}">{% translate "Add" %}</a></td>
+            {% else %}
+              <td></td>
+            {% endif %}
+            {% if model.admin_url and show_changelinks %}
+              <td><a href="{{ model.admin_url }}" class="changelink" title="{% blocktranslate with name=model.name %}Change {{ name }}{% endblocktranslate %}">{% translate "Change" %}</a></td>
+            {% elif show_changelinks %}
+              <td></td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% endif %}
+{% endfor %}
